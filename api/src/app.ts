@@ -2,6 +2,7 @@ import express, {
   type ErrorRequestHandler,
   type RequestHandler,
 } from "express";
+import { pool } from "./db/pool.js";
 
 const notFound: RequestHandler = (req, res) => {
   res.status(404).json({ error: "Not Found", path: req.originalUrl });
@@ -35,6 +36,16 @@ export function createApp() {
       uptimeSeconds: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  app.get("/ready", async (_req, res) => {
+    try {
+      await pool.query("SELECT 1");
+      res.status(200).json({ status: "ready" });
+    } catch (err) {
+      console.error("Readiness check failed", err);
+      res.status(503).json({ status: "unavailable" });
+    }
   });
 
   app.use(notFound);

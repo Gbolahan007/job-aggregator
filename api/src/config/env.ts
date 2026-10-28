@@ -1,4 +1,3 @@
-// src/config/env.ts
 import "dotenv/config";
 
 function readPort(raw: string | undefined): number {
@@ -9,7 +8,14 @@ function readPort(raw: string | undefined): number {
   return port;
 }
 
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required env var: ${name}`);
+  return value;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: readPort(process.env.PORT),
+  databaseUrl: required("DATABASE_URL"),
 } as const;
