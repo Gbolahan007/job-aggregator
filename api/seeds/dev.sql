@@ -30,11 +30,17 @@ INSERT INTO jobs (
   -- 7. A date in the future: bad provider data
   ((SELECT id FROM job_sources WHERE slug = 'remote-ok'), 'seed-7', 'Full-Stack Engineer', 'Bright Orbit', 'https://example.com/jobs/seed-7',
    'remote', 'full-time', NULL, NULL, NULL, NULL, NULL, now() + interval '3 hours', 'source', 'active'),
+  
   -- 8. Fresh but closed
   ((SELECT id FROM job_sources WHERE slug = 'greenhouse'), 'seed-8', 'Frontend Developer', 'Moss & Co', 'https://example.com/jobs/seed-8',
-   'onsite', 'part-time', 'Lagos, Nigeria', NULL, NULL, NULL, NULL, now() - interval '1 hour', 'source', 'closed')
+   'onsite', 'part-time', 'Lagos, Nigeria', NULL, NULL, NULL, NULL, now() - interval '1 hour', 'source', 'closed'),
+
+  -- 9. Five days old: only in the 7-day window
+  ((SELECT id FROM job_sources WHERE slug = 'remote-ok'), 'seed-9', 'Full-Stack Developer', 'Lagos Logistics', 'https://example.com/jobs/seed-9',
+   'remote', 'contract', NULL, 40, 60, 'USD', 'hour', now() - interval '5 days', 'source', 'active')
 ON CONFLICT (source_id, external_id) DO UPDATE SET
   published_at            = EXCLUDED.published_at,
   published_at_provenance = EXCLUDED.published_at_provenance,
   status                  = EXCLUDED.status,
   updated_at              = now();
+

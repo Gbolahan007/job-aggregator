@@ -3,6 +3,7 @@ import express, {
   type RequestHandler,
 } from "express";
 import { pool } from "./db/pool.js";
+import jobsRouter from "./routes/jobsRoutes.js";
 
 const notFound: RequestHandler = (req, res) => {
   res.status(404).json({ error: "Not Found", path: req.originalUrl });
@@ -47,6 +48,8 @@ export function createApp() {
       res.status(503).json({ status: "unavailable" });
     }
   });
+
+  app.use("/jobs", jobsRouter);
 
   app.use(notFound);
   app.use(errorHandler);
