@@ -23,3 +23,24 @@ export async function getAllJobs(
     data: { jobs },
   });
 }
+
+export async function getJob(req: Request, res: Response, next: NextFunction) {
+  const { id } = req.params;
+
+  if (!jobsModel.isJobId(id)) {
+    return next(
+      new AppError("Invalid job id. It must be a positive whole number.", 400),
+    );
+  }
+
+  const job = await jobsModel.getJob(id);
+
+  if (!job) {
+    return next(new AppError("No job found with that ID", 404));
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: { job },
+  });
+}
