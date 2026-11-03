@@ -18,7 +18,17 @@ export interface JobRow {
   status: string;
 }
 
-export async function listFreshJobs(windowHours: number): Promise<JobRow[]> {
+function toContainsPattern(term: string): string {
+  const escaped = term.replace(/[\\%_]/g, "\\$&");
+  return `%${escaped}%`;
+}
+
+export async function listFreshJobs(
+  windowHours: number,
+  search?: string,
+): Promise<JobRow[]> {
+  const pattern = search ? toContainsPattern(search) : null;
+
   const result = await pool.query<JobRow>(
     `SELECT id, external_id, title, company, location, work_arrangement,
             employment_type, application_url, salary_min, salary_max,
@@ -29,8 +39,9 @@ export async function listFreshJobs(windowHours: number): Promise<JobRow[]> {
         AND published_at_provenance = 'source'
         AND published_at <= now()
         AND published_at >= now() - make_interval(hours => $1)
+        AND ($2::text IS NULL OR title ILIKE $2 OR company ILIKE $2)
       ORDER BY published_at DESC`,
-    [windowHours],
+    [windowHours, pattern],
   );
   return result.rows;
 }

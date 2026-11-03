@@ -5,6 +5,7 @@ import {
 } from "../repositories/jobsRepository.js";
 
 const JOB_ID_PATTERN = /^[1-9]\d{0,17}$/;
+export const MAX_SEARCH_LENGTH = 100;
 
 export const FEED_WINDOWS = { "24h": 24, "3d": 72, "7d": 168 } as const;
 export type FeedWindow = keyof typeof FEED_WINDOWS;
@@ -14,8 +15,11 @@ export function isFeedWindow(value: unknown): value is FeedWindow {
   return typeof value === "string" && Object.hasOwn(FEED_WINDOWS, value);
 }
 
-export async function getFeed(window: FeedWindow): Promise<JobRow[]> {
-  return listFreshJobs(FEED_WINDOWS[window]);
+export async function getFeed(
+  window: FeedWindow,
+  search?: string,
+): Promise<JobRow[]> {
+  return listFreshJobs(FEED_WINDOWS[window], search);
 }
 
 export function isJobId(value: unknown): value is string {
