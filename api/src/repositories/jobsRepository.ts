@@ -16,6 +16,15 @@ export interface JobRow {
   published_at: Date | null; // timestamptz arrives as a JS Date
   published_at_provenance: string;
   status: string;
+  source?: string;
+}
+
+export interface FeedFilters {
+  search?: string;
+  workArrangement?: string;
+  employmentType?: string;
+  location?: string;
+  source?: string;
 }
 
 function toContainsPattern(term: string): string {
@@ -25,35 +34,68 @@ function toContainsPattern(term: string): string {
 
 export async function listFreshJobs(
   windowHours: number,
-  search?: string,
+  filters: FeedFilters = {},
 ): Promise<JobRow[]> {
-  const pattern = search ? toContainsPattern(search) : null;
+  const values: unknown[] = [];
 
-  const result = await pool.query<JobRow>(
-    `SELECT id, external_id, title, company, location, work_arrangement,
-            employment_type, application_url, salary_min, salary_max,
-            salary_currency, salary_period, published_at,
-            published_at_provenance, status
-       FROM jobs
-      WHERE status = 'active'
-        AND published_at_provenance = 'source'
-        AND published_at <= now()
-        AND published_at >= now() - make_interval(hours => $1)
-        AND ($2::text IS NULL OR title ILIKE $2 OR company ILIKE $2)
-      ORDER BY published_at DESC`,
-    [windowHours, pattern],
-  );
+  function addValue(value: unknown): string {
+    values.push(value);
+    return `$${values.length}`;
+  }
+
+  const conditions: string[] = [
+    "s.is_enabled",
+    "j.status = 'active'",
+    "j.published_at_provenance = 'source'",
+    "j.published_at <= now()",
+    `j.published_at >= now() - make_interval(hours => ${addValue(windowHours)})`,
+  ];
+
+  if (filters.search) {
+    const pattern = addValue(toContainsPattern(filters.search));
+    conditions.push(`(j.title ILIKE ${pattern} OR j.company ILIKE ${pattern})`);
+  }
+  if (filters.workArrangement) {
+    conditions.push(
+      `j.work_arrangement = ${addValue(filters.workArrangement)}`,
+    );
+  }
+  if (filters.employmentType) {
+    conditions.push(`j.employment_type = ${addValue(filters.employmentType)}`);
+  }
+  if (filters.location) {
+    conditions.push(
+      `j.location ILIKE ${addValue(toContainsPattern(filters.location))}`,
+    );
+  }
+  if (filters.source) {
+    conditions.push(`s.slug = ${addValue(filters.source)}`);
+  }
+
+  const sql = `
+    SELECT j.id, j.external_id, j.title, j.company, j.location, j.work_arrangement,
+           j.employment_type, j.application_url, j.salary_min, j.salary_max,
+           j.salary_currency, j.salary_period, j.published_at,
+           j.published_at_provenance, j.status, s.slug AS source
+      FROM jobs AS j
+      JOIN job_sources AS s ON s.id = j.source_id
+     WHERE ${conditions.join(" AND ")}
+     ORDER BY j.published_at DESC`;
+
+  const result = await pool.query<JobRow>(sql, values);
   return result.rows;
 }
 
 export async function getJobById(id: string): Promise<JobRow | null> {
   const result = await pool.query<JobRow>(
-    `SELECT id, external_id, title, company, location, work_arrangement,
-            employment_type, application_url, salary_min, salary_max,
-            salary_currency, salary_period, published_at,
-            published_at_provenance, status
-       FROM jobs
-      WHERE id = $1`,
+    `SELECT j.id, j.external_id, j.title, j.company, j.location, j.work_arrangement,
+            j.employment_type, j.application_url, j.salary_min, j.salary_max,
+            j.salary_currency, j.salary_period, j.published_at,
+            j.published_at_provenance, j.status,
+            s.slug AS source
+       FROM jobs AS j
+       JOIN job_sources AS s ON s.id = j.source_id
+      WHERE j.id = $1`,
     [id],
   );
   return result.rows[0] ?? null;

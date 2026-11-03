@@ -29,7 +29,7 @@ INSERT INTO jobs (
    'remote', 'full-time', NULL, NULL, NULL, NULL, NULL, now() - interval '5 hours', 'estimated', 'active'),
   -- 7. A date in the future: bad provider data
   ((SELECT id FROM job_sources WHERE slug = 'remote-ok'), 'seed-7', 'Full-Stack Engineer', 'Bright Orbit', 'https://example.com/jobs/seed-7',
-   'remote', 'full-time', NULL, NULL, NULL, NULL, NULL, now() + interval '3 hours', 'source', 'active'),
+   'remote', 'full-time', NULL, NULL, NULL, NULL, NULL, now() + interval '1 year', 'source', 'active'),
   
   -- 8. Fresh but closed
   ((SELECT id FROM job_sources WHERE slug = 'greenhouse'), 'seed-8', 'Frontend Developer', 'Moss & Co', 'https://example.com/jobs/seed-8',
