@@ -29,6 +29,23 @@ function requireOneOf(
     );
   }
 }
+function readPositiveInt(
+  value: unknown,
+  name: string,
+  fallback: number,
+  max: number,
+): number {
+  const text = readQueryParam(value, name);
+  if (text === undefined) return fallback;
+  if (!/^\d+$/.test(text)) {
+    throw new AppError(`${name} must be a whole number.`, 400);
+  }
+  const number = Number(text);
+  if (number < 1 || number > max) {
+    throw new AppError(`${name} must be between 1 and ${max}.`, 400);
+  }
+  return number;
+}
 
 export async function getAllJobs(
   req: Request,
@@ -68,14 +85,36 @@ export async function getAllJobs(
     );
   }
 
+  const page = readPositiveInt(req.query.page, "page", 1, jobsModel.MAX_PAGE);
+  const limit = readPositiveInt(
+    req.query.limit,
+    "limit",
+    jobsModel.DEFAULT_LIMIT,
+    jobsModel.MAX_LIMIT,
+  );
+  const sort = readQueryParam(req.query.sort, "sort") ?? jobsModel.DEFAULT_SORT;
+
+  if (!jobsModel.isFeedSort(sort)) {
+    throw new AppError(
+      `Invalid sort. Use one of: ${jobsModel.SORT_OPTIONS.join(", ")}`,
+      400,
+    );
+  }
+
   const filters = { search, location, workArrangement, employmentType, source };
-  const jobs = await jobsModel.getFeed(feedWindow, filters);
+  const { jobs, total, totalPages } = await jobsModel.getFeed(
+    feedWindow,
+    filters,
+    { page, limit, sort },
+  );
 
   res.status(200).json({
     status: "success",
     window: feedWindow,
     filters,
+    sort,
     results: jobs.length,
+    pagination: { page, limit, total, totalPages },
     data: { jobs },
   });
 }

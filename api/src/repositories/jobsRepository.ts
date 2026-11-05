@@ -16,7 +16,7 @@ export interface JobRow {
   published_at: Date | null; // timestamptz arrives as a JS Date
   published_at_provenance: string;
   status: string;
-  source?: string;
+  source: string;
 }
 
 export interface FeedFilters {
@@ -27,6 +27,30 @@ export interface FeedFilters {
   source?: string;
 }
 
+export type FeedSort = "newest" | "oldest";
+
+export interface FeedPage {
+  limit: number;
+  offset: number;
+  sort: FeedSort;
+}
+
+export interface FeedResult {
+  jobs: JobRow[];
+  total: number;
+}
+
+const JOB_COLUMNS = `
+  j.id, j.external_id, j.title, j.company, j.location, j.work_arrangement,
+  j.employment_type, j.application_url, j.salary_min, j.salary_max,
+  j.salary_currency, j.salary_period, j.published_at,
+  j.published_at_provenance, j.status, s.slug AS source`;
+
+const ORDER_BY: Record<FeedSort, string> = {
+  newest: "j.published_at DESC, j.id DESC",
+  oldest: "j.published_at ASC, j.id ASC",
+};
+
 function toContainsPattern(term: string): string {
   const escaped = term.replace(/[\\%_]/g, "\\$&");
   return `%${escaped}%`;
@@ -34,8 +58,9 @@ function toContainsPattern(term: string): string {
 
 export async function listFreshJobs(
   windowHours: number,
-  filters: FeedFilters = {},
-): Promise<JobRow[]> {
+  filters: FeedFilters,
+  page: FeedPage,
+): Promise<FeedResult> {
   const values: unknown[] = [];
 
   function addValue(value: unknown): string {
@@ -72,27 +97,30 @@ export async function listFreshJobs(
     conditions.push(`s.slug = ${addValue(filters.source)}`);
   }
 
-  const sql = `
-    SELECT j.id, j.external_id, j.title, j.company, j.location, j.work_arrangement,
-           j.employment_type, j.application_url, j.salary_min, j.salary_max,
-           j.salary_currency, j.salary_period, j.published_at,
-           j.published_at_provenance, j.status, s.slug AS source
+  const fromAndWhere = `
       FROM jobs AS j
       JOIN job_sources AS s ON s.id = j.source_id
-     WHERE ${conditions.join(" AND ")}
-     ORDER BY j.published_at DESC`;
+     WHERE ${conditions.join(" AND ")}`;
 
-  const result = await pool.query<JobRow>(sql, values);
-  return result.rows;
+  const countResult = await pool.query<{ total: number }>(
+    `SELECT count(*)::int AS total ${fromAndWhere}`,
+    values,
+  );
+
+  const pageResult = await pool.query<JobRow>(
+    `SELECT ${JOB_COLUMNS}
+     ${fromAndWhere}
+      ORDER BY ${ORDER_BY[page.sort]}
+      LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+    [...values, page.limit, page.offset],
+  );
+
+  return { jobs: pageResult.rows, total: countResult.rows[0]?.total ?? 0 };
 }
 
 export async function getJobById(id: string): Promise<JobRow | null> {
   const result = await pool.query<JobRow>(
-    `SELECT j.id, j.external_id, j.title, j.company, j.location, j.work_arrangement,
-            j.employment_type, j.application_url, j.salary_min, j.salary_max,
-            j.salary_currency, j.salary_period, j.published_at,
-            j.published_at_provenance, j.status,
-            s.slug AS source
+    `SELECT ${JOB_COLUMNS}
        FROM jobs AS j
        JOIN job_sources AS s ON s.id = j.source_id
       WHERE j.id = $1`,
