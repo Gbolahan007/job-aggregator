@@ -4,24 +4,27 @@ import express, {
 } from "express";
 import { pool } from "./db/pool.js";
 import jobsRouter from "./routes/jobsRoutes.js";
+import { AppError } from "./utils/appError.js";
 
-const notFound: RequestHandler = (req, res) => {
-  res.status(404).json({ error: "Not Found", path: req.originalUrl });
+const notFound: RequestHandler = (req, _res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server`, 404));
 };
 
 // Keep all four parameters: Express treats a function as an error handler by its arity.
 const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
   if (res.headersSent) return next(err);
 
-  const status =
+  const statusCode =
     Number.isInteger(err?.status) && err.status >= 400 && err.status < 600
       ? err.status
       : 500;
 
-  if (status >= 500) console.error(err);
+  if (statusCode >= 500) console.error(err);
 
-  res.status(status).json({
-    error: status >= 500 ? "Internal Server Error" : err.message,
+  res.status(statusCode).json({
+    status: statusCode < 500 ? "fail" : "error",
+    message:
+      statusCode < 500 ? err.message : "Something went wrong on our side.",
   });
 };
 

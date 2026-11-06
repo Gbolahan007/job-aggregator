@@ -46,12 +46,37 @@ function readPositiveInt(
   }
   return number;
 }
+const FEED_QUERY_PARAMS: readonly string[] = [
+  "window",
+  "q",
+  "location",
+  "work_arrangement",
+  "employment_type",
+  "source",
+  "page",
+  "limit",
+  "sort",
+];
+
+function rejectUnknownParams(
+  query: Request["query"],
+  allowed: readonly string[],
+) {
+  const unknown = Object.keys(query).filter((key) => !allowed.includes(key));
+  if (unknown.length > 0) {
+    throw new AppError(
+      `Unknown query parameter: ${unknown.join(", ")}. Allowed: ${allowed.join(", ")}`,
+      400,
+    );
+  }
+}
 
 export async function getAllJobs(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
+  rejectUnknownParams(req.query, FEED_QUERY_PARAMS);
   const feedWindow = req.query.window ?? jobsModel.DEFAULT_WINDOW;
 
   if (!jobsModel.isFeedWindow(feedWindow)) {

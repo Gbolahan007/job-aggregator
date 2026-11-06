@@ -9,8 +9,8 @@ export interface JobRow {
   work_arrangement: string;
   employment_type: string;
   application_url: string;
-  salary_min: string | null; // numeric arrives as a string
-  salary_max: string | null;
+  salary_min: number | null; // cast to float8 in SQL, arrives as a number
+  salary_max: number | null;
   salary_currency: string | null;
   salary_period: string | null;
   published_at: Date | null; // timestamptz arrives as a JS Date
@@ -42,7 +42,7 @@ export interface FeedResult {
 
 const JOB_COLUMNS = `
   j.id, j.external_id, j.title, j.company, j.location, j.work_arrangement,
-  j.employment_type, j.application_url, j.salary_min, j.salary_max,
+  j.employment_type, j.application_url, j.salary_min::float8 AS salary_min, j.salary_max::float8 AS salary_max,
   j.salary_currency, j.salary_period, j.published_at,
   j.published_at_provenance, j.status, s.slug AS source`;
 
