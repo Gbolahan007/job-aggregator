@@ -10,10 +10,13 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test",
     "build": "tsc",
     "start": "node dist/server.js",
-    "migrate": "tsx src/db/migrate.ts"
+    "migrate": "tsx src/db/migrate.ts",
+    "ingest": "tsx src/cli/ingest.ts",
+    "test": "tsx --test test/unit/*.test.ts",
+    "test:db": "tsx --test --test-concurrency=1 test/db/*.test.ts"
   },
   "keywords": [],
   "author": "Gbolahan Lawal",

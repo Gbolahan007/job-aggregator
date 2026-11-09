@@ -85,6 +85,30 @@ The listings belong to their providers and employers. Any commercial use would n
 
 The fake jobs in `seeds/dev.sql` belong to the `demo` source and use `example.com` links. They are never credited to a real provider.
 
+## Ingestion
+
+```sh
+npm run ingest                        # every enabled feed
+npm run ingest -- --source=remotive   # one source's feeds only
+```
+
+Each run takes a database lock, so two runs never overlap. It checks each feed's minimum interval and any daily request cap, then records what happened in `ingestion_runs`. Logs are one JSON object per line, with API keys redacted. Until the provider adapters land (Tasks 4.6 to 4.9), every feed is skipped.
+
+## Tests
+
+```sh
+npm test   # unit tests; no database needed
+```
+
+The database tests need a database of their own, whose name must end in `_test`. They refuse to run anywhere else, so they can't touch development data.
+
+```sh
+# once, in psql as a superuser:
+#   CREATE DATABASE job_aggregator_test OWNER job_app;
+DATABASE_URL=postgres://job_app:change-me@localhost:5432/job_aggregator_test npm run migrate
+DATABASE_URL=postgres://job_app:change-me@localhost:5432/job_aggregator_test npm run test:db
+```
+
 ## Project layout
 
 ```text
@@ -98,7 +122,12 @@ api/
     controllers/  reads and validates the request, shapes the response
     models/       feed rules: windows, filters, pagination
     repositories/ SQL only
+    ingestion/    fetch-and-save pipeline: HTTP client, budget, runner, provider adapters
+    cli/          command-line entry points (npm run ingest)
     utils/        AppError
+  test/
+    unit/         tests with no database
+    db/           tests against a *_test database
 ```
 
 ## Licence

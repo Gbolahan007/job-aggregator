@@ -14,8 +14,16 @@ function required(name: string): string {
   return value;
 }
 
+/** Unset and empty both mean "not configured". */
+function optional(name: string): string | undefined {
+  const value = process.env[name];
+  return value ? value : undefined;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: readPort(process.env.PORT),
   databaseUrl: required("DATABASE_URL"),
+  // Needed only once the Jooble feeds are switched on (Task 4.9).
+  joobleApiKey: optional("JOOBLE_API_KEY"),
 } as const;
