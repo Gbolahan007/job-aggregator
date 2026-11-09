@@ -1,8 +1,13 @@
 {
-  "name": "api",
+  "name": "job-aggregator-api",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "REST API for a job aggregator: recent listings from public job APIs, with honest posting dates and eligibility",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gbolahan007/job-aggregator.git",
+    "directory": "api"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "typecheck": "tsc --noEmit",
@@ -11,8 +16,8 @@
     "migrate": "tsx src/db/migrate.ts"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Gbolahan Lawal",
+  "license": "UNLICENSED",
   "type": "module",
   "dependencies": {
     "dotenv": "^18.0.9",
